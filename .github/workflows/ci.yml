@@ -17,6 +17,9 @@ jobs:
   setup:
     runs-on: ubuntu-latest
 
+    outputs:
+      version: ${{ steps.get_version.outputs.version }}
+
     steps:
       - name: Checkout Code
         uses: actions/checkout@v4
@@ -31,6 +34,16 @@ jobs:
           python -m pip install --upgrade pip
           pip install -r requirements.txt
           pip install pytest pytest-cov coverage pylint
+
+      # =========================
+      # VERSION HANDLING
+      # =========================
+      - name: Read Version
+        id: get_version
+        run: |
+          VERSION=$(cat version.txt)
+          echo "Current version: $VERSION"
+          echo "version=$VERSION" >> $GITHUB_OUTPUT
 
 
 # =========================
@@ -56,11 +69,9 @@ jobs:
       - name: Run Lint
         run: pylint app || true
 
-      # Generate coverage for Sonar
       - name: Generate Coverage XML
         run: pytest --cov=app --cov-report=xml
 
-      # Sonar Scan
       - name: Sonar Scan
         uses: sonarsource/sonarqube-scan-action@v2
         env:
@@ -88,13 +99,13 @@ jobs:
 
       - name: Build Artifact
         run: |
-          mkdir -p dist
+          mkdir dist
           cp -r app dist/
           cp requirements.txt dist/
 
 
 # =========================
-# JOB 4: TEST (90% COVERAGE ENFORCED)
+# JOB 4: TEST
 # =========================
   test:
     needs: build
@@ -113,14 +124,11 @@ jobs:
           pip install -r requirements.txt
           pip install pytest pytest-cov coverage
 
-      - name: Clean Coverage
+      - name: Clean coverage
         run: |
           rm -f .coverage
           rm -rf htmlcov
 
-      # ========================
-      # STAGE-WISE TEST EXECUTION
-      # ========================
       - name: Run Auth Tests
         run: pytest -v tests/test_auth.py --cov=app --cov-append
 
@@ -133,27 +141,15 @@ jobs:
       - name: Run Performance Tests
         run: pytest -v tests/test_performance.py --cov=app --cov-append
 
-      # ========================
-      # COVERAGE CHECK
-      # ========================
-      - name: Generate Coverage Report
-        run: coverage report -m
-
       - name: Enforce Coverage >= 90%
         run: coverage report --fail-under=90
 
       - name: Generate HTML Coverage
         run: coverage html
 
-      - name: Upload Coverage Report
-        uses: actions/upload-artifact@v4
-        with:
-          name: coverage-report
-          path: htmlcov/
-
 
 # =========================
-# JOB 5: PACKAGE + JFROG
+# JOB 5: PACKAGE + JFROG (WITH VERSION)
 # =========================
   publish:
     needs: test
@@ -162,11 +158,16 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
+      # Get version from setup job
+      - name: Get Version
+        run: echo "VERSION=$(cat version.txt)" >> $GITHUB_ENV
+
       - name: Package Artifact
-        run: zip -r app.zip app requirements.txt
+        run: |
+          zip -r app-${VERSION}.zip app requirements.txt
 
       - name: Upload to JFrog
         run: |
-          curl -f -u ${{ secrets.JFROG_USER }}:${{ secrets.JFROG_PASSWORD }} \
-          -T app.zip \
-          "https://${{ secrets.JFROG_REGISTRY }}/artifactory/${{ env.JFROG_REPO }}/app.zip"
+          curl -u ${{ secrets.JFROG_USER }}:${{ secrets.JFROG_PASSWORD }} \
+          -T app-${VERSION}.zip \
+          "https://${{ secrets.JFROG_REGISTRY }}/artifactory/${{ env.JFROG_REPO }}/app-${VERSION}.zip"
