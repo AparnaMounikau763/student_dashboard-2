@@ -13,7 +13,7 @@ env:
 jobs:
 
 # =========================
-# JOB 1: SETUP (CHECKOUT + DEPENDENCIES)
+# JOB 1: SETUP
 # =========================
   setup:
     runs-on: ubuntu-latest
@@ -33,16 +33,18 @@ jobs:
           pip install -r requirements.txt
 
 # =========================
-# JOB 2: ANALYZE (LINT + SONAR + QUALITY GATE)
+# JOB 2: ANALYZE (LINT + SONAR)
 # =========================
   analyze:
     needs: setup
     runs-on: ubuntu-latest
 
     steps:
-      - uses: actions/checkout@v4
+      - name: Checkout Code
+        uses: actions/checkout@v4
 
-      - uses: actions/setup-python@v5
+      - name: Setup Python
+        uses: actions/setup-python@v5
         with:
           python-version: "3.11"
 
@@ -55,31 +57,36 @@ jobs:
       - name: Run Pylint
         run: pylint app || true
 
-      # COVERAGE FOR SONAR
+      # GENERATE COVERAGE FOR SONAR
       - name: Generate Coverage XML
         run: pytest --cov=app --cov-report=xml
+
+      # OPTIONAL DEBUG (can remove later)
+      - name: Debug Sonar Access
+        run: |
+          curl -u ${{ secrets.SONAR_TOKEN }}: https://sonarcloud.io/api/system/status
 
       # SONAR SCAN
       - name: SonarQube Scan
         uses: sonarsource/sonarqube-scan-action@v2
         with:
           args: >
-            -Dsonar.projectKey=AparnaMounikau763_student_dashboard-2
+            -Dsonar.projectKey=AparnaMounikau763_student_dashboard-22
             -Dsonar.organization=aparnamounikau763
             -Dsonar.sources=app
             -Dsonar.tests=tests
             -Dsonar.python.version=3.10
             -Dsonar.python.coverage.reportPaths=coverage.xml
         env:
-          SONAR_TOKEN: ${{ secrets.SONAR_TOKEN_V2 }}
+          SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
           SONAR_HOST_URL: https://sonarcloud.io
 
-      # QUALITY GATE (BLOCKS PIPELINE)
+      # QUALITY GATE
       - name: Sonar Quality Gate
         uses: sonarsource/sonarqube-quality-gate-action@v1
         timeout-minutes: 5
         env:
-          SONAR_TOKEN: ${{ secrets.SONAR_TOKEN_V2 }}
+          SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
 
 # =========================
 # JOB 3: BUILD
@@ -98,7 +105,7 @@ jobs:
           cp requirements.txt dist/
 
 # =========================
-# JOB 4: TEST (WITH COVERAGE >= 90%)
+# JOB 4: TEST (COVERAGE ≥ 90%)
 # =========================
   test:
     needs: build
@@ -122,7 +129,7 @@ jobs:
           rm -rf htmlcov
 
       # -----------------------
-      # STAGE-WISE TEST EXECUTION
+      # STAGE-WISE TESTING
       # -----------------------
       - name: Run Auth Tests
         run: pytest -v tests/test_auth.py --cov=app --cov-append
@@ -137,7 +144,7 @@ jobs:
         run: pytest -v tests/test_performance.py --cov=app --cov-append
 
       # -----------------------
-      # COVERAGE VALIDATION (FAIL < 90%)
+      # COVERAGE VALIDATION
       # -----------------------
       - name: Enforce Coverage >= 90%
         run: coverage report --fail-under=90
