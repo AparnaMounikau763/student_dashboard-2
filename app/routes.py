@@ -205,3 +205,8 @@ def delete_student(id):
     db.session.commit()
 
     return success_response("Deleted successfully")
+
+
+@main.route('/health', methods=['GET'])
+def health():
+    return jsonify({"status": "ok"})
