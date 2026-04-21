@@ -29,6 +29,7 @@ jobs:
           pip install --upgrade pip
           pip install -r requirements.txt
 
+
 # =========================
 # JOB 2: ANALYZE (LINT + SONAR)
 # =========================
@@ -51,24 +52,32 @@ jobs:
       - name: Run Lint
         run: pylint app || true
 
-      # ✅ Generate coverage.xml for Sonar
+      # ✅ coverage for sonar
       - name: Generate Coverage XML
-        run: |
-          pytest --cov=app --cov-report=xml
+        run: pytest --cov=app --cov-report=xml
 
-      # ✅ CLEAN Sonar Scan (NO args duplication)
+      # 🔥 SONAR SCAN (IMPORTANT FIX)
       - name: SonarQube Scan
         uses: sonarsource/sonarqube-scan-action@v2
+        with:
+          args: >
+            -Dsonar.projectKey=AparnaMounikau763_student_dashboard-22
+            -Dsonar.organization=aparnamounikau763
+            -Dsonar.sources=app
+            -Dsonar.tests=tests
+            -Dsonar.python.version=3.10
+            -Dsonar.python.coverage.reportPaths=coverage.xml
         env:
           SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
           SONAR_HOST_URL: https://sonarcloud.io
 
-      # ✅ Quality Gate
+      # ✅ QUALITY GATE (FIXED)
       - name: Sonar Quality Gate
         uses: sonarsource/sonarqube-quality-gate-action@v1
         timeout-minutes: 5
         env:
           SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
+
 
 # =========================
 # JOB 3: BUILD
@@ -86,8 +95,9 @@ jobs:
           cp -r app dist/
           cp requirements.txt dist/
 
+
 # =========================
-# JOB 4: TEST (>= 90%)
+# JOB 4: TEST (90%+ COVERAGE)
 # =========================
   test:
     needs: build
@@ -105,14 +115,14 @@ jobs:
           pip install -r requirements.txt
           pip install pytest pytest-cov coverage
 
-      - name: Clean Coverage
+      - name: Clean old coverage
         run: |
           rm -f .coverage
           rm -rf htmlcov
 
-      # -----------------------
-      # STAGE-WISE TESTING
-      # -----------------------
+      # ========================
+      # STAGE-WISE TESTS
+      # ========================
       - name: Run Auth Tests
         run: pytest -v tests/test_auth.py --cov=app --cov-append
 
@@ -125,13 +135,13 @@ jobs:
       - name: Run Performance Tests
         run: pytest -v tests/test_performance.py --cov=app --cov-append
 
-      # -----------------------
-      # COVERAGE ENFORCEMENT
-      # -----------------------
+      # ========================
+      # COVERAGE CHECK
+      # ========================
       - name: Enforce Coverage >= 90%
         run: coverage report --fail-under=90
 
-      - name: Generate HTML Report
+      - name: Generate HTML Coverage
         run: coverage html
 
       - name: Upload Coverage Report
@@ -139,6 +149,7 @@ jobs:
         with:
           name: coverage-report
           path: htmlcov/
+
 
 # =========================
 # JOB 5: PACKAGE + JFROG
