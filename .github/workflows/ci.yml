@@ -56,11 +56,11 @@ jobs:
       - name: Run Lint
         run: pylint app || true
 
-      # generate coverage for sonar
+      # Generate coverage for Sonar
       - name: Generate Coverage XML
         run: pytest --cov=app --cov-report=xml
 
-      # SONAR SCAN (NO QUALITY GATE STEP)
+      # Sonar Scan
       - name: Sonar Scan
         uses: sonarsource/sonarqube-scan-action@v2
         env:
@@ -88,13 +88,13 @@ jobs:
 
       - name: Build Artifact
         run: |
-          mkdir dist
+          mkdir -p dist
           cp -r app dist/
           cp requirements.txt dist/
 
 
 # =========================
-# JOB 4: TEST (Stage-wise + 90%+ coverage)
+# JOB 4: TEST (90% COVERAGE ENFORCED)
 # =========================
   test:
     needs: build
@@ -113,13 +113,13 @@ jobs:
           pip install -r requirements.txt
           pip install pytest pytest-cov coverage
 
-      - name: Clean old coverage
+      - name: Clean Coverage
         run: |
           rm -f .coverage
           rm -rf htmlcov
 
       # ========================
-      # INDIVIDUAL TEST EXECUTION
+      # STAGE-WISE TEST EXECUTION
       # ========================
       - name: Run Auth Tests
         run: pytest -v tests/test_auth.py --cov=app --cov-append
@@ -134,8 +134,11 @@ jobs:
         run: pytest -v tests/test_performance.py --cov=app --cov-append
 
       # ========================
-      # COVERAGE CHECK (IMPORTANT)
+      # COVERAGE CHECK
       # ========================
+      - name: Generate Coverage Report
+        run: coverage report -m
+
       - name: Enforce Coverage >= 90%
         run: coverage report --fail-under=90
 
@@ -164,6 +167,6 @@ jobs:
 
       - name: Upload to JFrog
         run: |
-          curl -u ${{ secrets.JFROG_USER }}:${{ secrets.JFROG_PASSWORD }} \
+          curl -f -u ${{ secrets.JFROG_USER }}:${{ secrets.JFROG_PASSWORD }} \
           -T app.zip \
           "https://${{ secrets.JFROG_REGISTRY }}/artifactory/${{ env.JFROG_REPO }}/app.zip"
