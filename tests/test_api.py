@@ -65,3 +65,40 @@ def test_get_all_students(client):
 
     assert res.status_code == 200
     assert "data" in res.get_json()
+
+
+def test_post_student_missing_fields(client):
+    res = client.post('/students', json={})
+    assert res.status_code == 400
+
+
+def test_post_student_duplicate_username(client):
+    client.post('/students', json={
+        "username": "dup_user",
+        "email": "dup1@mail.com",
+        "password": "123"
+    })
+
+    res = client.post('/students', json={
+        "username": "dup_user",
+        "email": "new@mail.com",
+        "password": "123"
+    })
+
+    assert res.status_code == 400
+
+
+def test_post_student_duplicate_email(client):
+    client.post('/students', json={
+        "username": "user1",
+        "email": "same@mail.com",
+        "password": "123"
+    })
+
+    res = client.post('/students', json={
+        "username": "user2",
+        "email": "same@mail.com",
+        "password": "123"
+    })
+
+    assert res.status_code == 400

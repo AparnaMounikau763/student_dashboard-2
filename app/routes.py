@@ -5,7 +5,9 @@ from . import db
 main = Blueprint('main', __name__)
 
 
-
+# =========================
+# RESPONSE HELPERS
+# =========================
 def error_response(message, status_code=400):
     return jsonify({
         "status": "error",
@@ -21,159 +23,176 @@ def success_response(message, data=None, status_code=200):
     }), status_code
 
 
-
+# =========================
+# REGISTER
+# =========================
 @main.route('/register', methods=['POST'])
 def register():
-    data = request.json
+    data = request.get_json(silent=True) or {}
 
-    if not data.get("username") or not data.get("email") or not data.get("password"):
-        return error_response("All fields (username, email, password) are required")
+    username = data.get("username", "").strip()
+    email = data.get("email", "").strip()
+    password = data.get("password", "").strip()
 
-    # Check duplicate username
-    if Student.query.filter_by(username=data['username']).first():
-        return error_response(
-            f"Username '{data['username']}' already exists. Try a different username."
-        )
+    if not username or not email or not password:
+        return error_response("All fields are required")
 
-    # Check duplicate email
-    if Student.query.filter_by(email=data['email']).first():
-        return error_response(
-            f"Email '{data['email']}' is already registered. Try logging in."
-        )
+    if Student.query.filter_by(username=username).first():
+        return error_response("Username already exists")
 
-    student = Student(**data)
+    if Student.query.filter_by(email=email).first():
+        return error_response("Email already exists")
+
+    student = Student(username=username, email=email, password=password)
     db.session.add(student)
     db.session.commit()
 
     return success_response("Registered successfully", status_code=201)
 
 
-
+# =========================
+# LOGIN
+# =========================
 @main.route('/login', methods=['POST'])
 def login():
-    data = request.json
+    data = request.get_json(silent=True) or {}
 
-    if not data.get("username") or not data.get("password"):
-        return error_response("Username and password are required", 400)
+    username = data.get("username", "").strip()
+    password = data.get("password", "").strip()
+
+    if not username or not password:
+        return error_response("Username and password required", 400)
 
     user = Student.query.filter_by(
-        username=data['username'],
-        password=data['password']
+        username=username,
+        password=password
     ).first()
 
     if not user:
-        return error_response("Invalid username or password", 401)
+        return error_response("Invalid credentials", 401)
 
     return success_response("Login successful", {
         "id": user.id,
-        "username": user.username,
-        "email": user.email
+        "username": user.username
     })
 
+
+# =========================
+# SEARCH
+# =========================
 @main.route('/search', methods=['GET'])
 def search():
     query = request.args.get('q')
 
-    if not query:
-        return error_response("Query parameter 'q' is required")
+    if query is None or query.strip() == "":
+        return error_response("Query parameter required")
 
     results = Student.query.filter(Student.username.contains(query)).all()
 
-    data = [
-        {
-            "id": u.id,
-            "username": u.username
-        } for u in results
-    ]
+    data = [{"id": u.id, "username": u.username} for u in results]
 
-    return success_response("Search results fetched", data)
+    return success_response("Search results", data)
 
 
+# =========================
+# STUDENTS CRUD
+# =========================
 @main.route('/students', methods=['GET', 'POST'])
 def students():
 
+    # GET ALL
     if request.method == 'GET':
-        students = Student.query.all()
+        students_list = Student.query.all()
 
         data = [
             {
                 "id": s.id,
                 "username": s.username,
                 "email": s.email
-            } for s in students
+            } for s in students_list
         ]
 
         return success_response("Students fetched", data)
 
-    elif request.method == 'POST':
-        data = request.json
+    # CREATE
+    data = request.get_json(silent=True) or {}
 
-        if not data.get("username") or not data.get("email") or not data.get("password"):
-            return error_response("All fields (username, email, password) are required")
+    username = data.get("username", "").strip()
+    email = data.get("email", "").strip()
+    password = data.get("password", "").strip()
 
-        # Duplicate checks
-        if Student.query.filter_by(username=data['username']).first():
-            return error_response(f"Username '{data['username']}' already exists")
+    if not username or not email or not password:
+        return error_response("All fields required")
 
-        if Student.query.filter_by(email=data['email']).first():
-            return error_response(f"Email '{data['email']}' already exists")
+    if Student.query.filter_by(username=username).first():
+        return error_response("Username already exists")
 
-        student = Student(**data)
-        db.session.add(student)
-        db.session.commit()
+    if Student.query.filter_by(email=email).first():
+        return error_response("Email already exists")
 
-        return success_response("Student added successfully", status_code=201)
+    student = Student(username=username, email=email, password=password)
+    db.session.add(student)
+    db.session.commit()
 
+    return success_response("Student created", status_code=201)
+
+
+# =========================
+# GET SINGLE
+# =========================
 @main.route('/students/<int:id>', methods=['GET'])
 def get_student(id):
     student = Student.query.get(id)
 
     if not student:
-        return error_response("User not found", 404)
+        return error_response("Student not found", 404)
 
-    data = {
+    return success_response("Student found", {
         "id": student.id,
         "username": student.username,
         "email": student.email
-    }
-
-    return success_response("Student fetched", data)
+    })
 
 
+# =========================
+# UPDATE
+# =========================
 @main.route('/students/<int:id>', methods=['PUT'])
 def update_student(id):
     student = Student.query.get(id)
 
     if not student:
-        return error_response("User not found", 404)
+        return error_response("Student not found", 404)
 
-    data = request.json
+    data = request.get_json(silent=True) or {}
 
-    # Update username
-    if data.get('username'):
-        existing = Student.query.filter_by(username=data['username']).first()
+    new_username = data.get("username")
+    new_email = data.get("email")
+
+    if new_username:
+        existing = Student.query.filter_by(username=new_username).first()
         if existing and existing.id != id:
-            return error_response(f"Username '{data['username']}' already exists")
-        student.username = data['username']
+            return error_response("Username already exists")
+        student.username = new_username
 
-    # Update email
-    if data.get('email'):
-        existing = Student.query.filter_by(email=data['email']).first()
+    if new_email:
+        existing = Student.query.filter_by(email=new_email).first()
         if existing and existing.id != id:
-            return error_response(f"Email '{data['email']}' already exists")
-        student.email = data['email']
+            return error_response("Email already exists")
+        student.email = new_email
 
     db.session.commit()
 
-    updated_data = {
+    return success_response("Updated successfully", {
         "id": student.id,
         "username": student.username,
         "email": student.email
-    }
-
-    return success_response("Student updated successfully", updated_data)
+    })
 
 
+# =========================
+# DELETE
+# =========================
 @main.route('/students/<int:id>', methods=['DELETE'])
 def delete_student(id):
     student = Student.query.get(id)
@@ -184,4 +203,4 @@ def delete_student(id):
     db.session.delete(student)
     db.session.commit()
 
-    return success_response("Student deleted successfully")
+    return success_response("Deleted successfully")
