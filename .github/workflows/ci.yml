@@ -5,10 +5,9 @@ on:
     branches: ["main"]
 
 env:
-  IMAGE_NAME: student-dashboard
-  JFROG_REGISTRY: ${{ secrets.JFROG_REGISTRY }}
-  JFROG_REPO: student-dashboard
   PYTHON_VERSION: "3.10"
+  IMAGE_NAME: student-dashboard
+  JFROG_REPO: student-dashboard
 
 jobs:
 
@@ -19,11 +18,9 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-      - name: Checkout Code
-        uses: actions/checkout@v4
+      - uses: actions/checkout@v4
 
-      - name: Setup Python
-        uses: actions/setup-python@v5
+      - uses: actions/setup-python@v5
         with:
           python-version: ${{ env.PYTHON_VERSION }}
 
@@ -40,48 +37,33 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-      - name: Checkout Code
-        uses: actions/checkout@v4
+      - uses: actions/checkout@v4
 
-      - name: Setup Python
-        uses: actions/setup-python@v5
+      - uses: actions/setup-python@v5
         with:
-          python-version: "3.11"
+          python-version: ${{ env.PYTHON_VERSION }}
 
-      - name: Install Dev Dependencies
+      - name: Install Tools
         run: |
           pip install -r requirements.txt
           pip install pylint pytest pytest-cov coverage
 
-      # LINT
-      - name: Run Pylint
+      - name: Run Lint
         run: pylint app || true
 
-      # GENERATE COVERAGE FOR SONAR
+      # ✅ Generate coverage.xml for Sonar
       - name: Generate Coverage XML
-        run: pytest --cov=app --cov-report=xml
-
-      # OPTIONAL DEBUG (can remove later)
-      - name: Debug Sonar Access
         run: |
-          curl -u ${{ secrets.SONAR_TOKEN }}: https://sonarcloud.io/api/system/status
+          pytest --cov=app --cov-report=xml
 
-      # SONAR SCAN
+      # ✅ CLEAN Sonar Scan (NO args duplication)
       - name: SonarQube Scan
         uses: sonarsource/sonarqube-scan-action@v2
-        with:
-          args: >
-            -Dsonar.projectKey=AparnaMounikau763_student_dashboard-22
-            -Dsonar.organization=aparnamounikau763
-            -Dsonar.sources=app
-            -Dsonar.tests=tests
-            -Dsonar.python.version=3.10
-            -Dsonar.python.coverage.reportPaths=coverage.xml
         env:
           SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
           SONAR_HOST_URL: https://sonarcloud.io
 
-      # QUALITY GATE
+      # ✅ Quality Gate
       - name: Sonar Quality Gate
         uses: sonarsource/sonarqube-quality-gate-action@v1
         timeout-minutes: 5
@@ -105,7 +87,7 @@ jobs:
           cp requirements.txt dist/
 
 # =========================
-# JOB 4: TEST (COVERAGE ≥ 90%)
+# JOB 4: TEST (>= 90%)
 # =========================
   test:
     needs: build
@@ -118,7 +100,7 @@ jobs:
         with:
           python-version: ${{ env.PYTHON_VERSION }}
 
-      - name: Install Test Dependencies
+      - name: Install Dependencies
         run: |
           pip install -r requirements.txt
           pip install pytest pytest-cov coverage
@@ -144,12 +126,12 @@ jobs:
         run: pytest -v tests/test_performance.py --cov=app --cov-append
 
       # -----------------------
-      # COVERAGE VALIDATION
+      # COVERAGE ENFORCEMENT
       # -----------------------
       - name: Enforce Coverage >= 90%
         run: coverage report --fail-under=90
 
-      - name: Generate HTML Coverage
+      - name: Generate HTML Report
         run: coverage html
 
       - name: Upload Coverage Report
@@ -159,7 +141,7 @@ jobs:
           path: htmlcov/
 
 # =========================
-# JOB 5: PACKAGE + UPLOAD TO JFROG
+# JOB 5: PACKAGE + JFROG
 # =========================
   publish:
     needs: test
