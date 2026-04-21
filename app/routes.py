@@ -112,7 +112,9 @@ def students():
             } for s in students_list
         ]
 
-        return success_response("Students fetched", data)
+        return jsonify({
+            "result": data
+        })
 
     # CREATE
     data = request.get_json(silent=True) or {}
