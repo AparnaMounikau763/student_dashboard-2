@@ -71,6 +71,7 @@ jobs:
           SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
           SONAR_HOST_URL: https://sonarcloud.io
 
+
       # ✅ QUALITY GATE (FIXED)
       - name: Sonar Quality Gate
         uses: sonarsource/sonarqube-quality-gate-action@v1
