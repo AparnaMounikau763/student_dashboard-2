@@ -151,7 +151,7 @@ jobs:
 # =========================
 # JOB 5: PACKAGE + JFROG (WITH VERSION)
 # =========================
- publish:
+  publish:
   needs: test
   runs-on: ubuntu-latest
 
