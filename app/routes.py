@@ -4,9 +4,8 @@ from . import db
 
 main = Blueprint('main', __name__)
 
-# CI/CD test change for versioning check 
 # =========================
-# RESPONSE HELPERS
+# HELPERS
 # =========================
 def error_response(message, status_code=400):
     return jsonify({
@@ -46,9 +45,8 @@ def register():
     student = Student(username=username, email=email, password=password)
     db.session.add(student)
     db.session.commit()
-#   return success_response("Registered successfully", status_code=201)
-    return success_response("User Registration successful ", status_code=201)
 
+    return success_response("User Registration successful", None, 201)
 
 
 # =========================
@@ -62,12 +60,9 @@ def login():
     password = data.get("password", "").strip()
 
     if not username or not password:
-        return error_response("Username and password required", 400)
+        return error_response("Username and password required")
 
-    user = Student.query.filter_by(
-        username=username,
-        password=password
-    ).first()
+    user = Student.query.filter_by(username=username, password=password).first()
 
     if not user:
         return error_response("Invalid credentials", 401)
@@ -85,7 +80,7 @@ def login():
 def search():
     query = request.args.get('q')
 
-    if query is None or query.strip() == "":
+    if not query or query.strip() == "":
         return error_response("Query parameter required")
 
     results = Student.query.filter(Student.username.contains(query)).all()
@@ -96,7 +91,7 @@ def search():
 
 
 # =========================
-# STUDENTS CRUD
+# STUDENTS (IMPORTANT FIX HERE)
 # =========================
 @main.route('/students', methods=['GET', 'POST'])
 def students():
@@ -113,9 +108,8 @@ def students():
             } for s in students_list
         ]
 
-        return jsonify({
-            "result": data
-        })
+        # ✅ FIXED: must return "data" not "result"
+        return success_response("Students fetched", data)
 
     # CREATE
     data = request.get_json(silent=True) or {}
@@ -137,7 +131,7 @@ def students():
     db.session.add(student)
     db.session.commit()
 
-    return success_response("Student created", status_code=201)
+    return success_response("Student created", None, 201)
 
 
 # =========================
@@ -209,6 +203,9 @@ def delete_student(id):
     return success_response("Deleted successfully")
 
 
+# =========================
+# HEALTH CHECK
+# =========================
 @main.route('/health', methods=['GET'])
 def health():
     return jsonify({"status": "ok"})
