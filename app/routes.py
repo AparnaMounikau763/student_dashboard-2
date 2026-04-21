@@ -46,8 +46,9 @@ def register():
     student = Student(username=username, email=email, password=password)
     db.session.add(student)
     db.session.commit()
+#   return success_response("Registered successfully", status_code=201)
+    return success_response("User Registration successful ", status_code=201)
 
-    return success_response("Registered successfully", status_code=201)
 
 
 # =========================
