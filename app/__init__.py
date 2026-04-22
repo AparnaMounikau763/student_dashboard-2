@@ -1,4 +1,4 @@
-from flask import Flask
+from flask import Flask, jsonify
 from flask_sqlalchemy import SQLAlchemy
 
 db = SQLAlchemy()
@@ -11,8 +11,17 @@ def create_app():
 
     db.init_app(app)
 
-    # ✅ REGISTER BLUEPRINT (THIS IS THE MISSING PART)
+    # =========================
+    # REGISTER BLUEPRINT
+    # =========================
     from .routes import main
-    app.register_blueprint(main)
+    app.register_blueprint(main, url_prefix="/api")   # 👈 IMPORTANT
+
+    # =========================
+    # ROOT HEALTH CHECK (CRITICAL FIX)
+    # =========================
+    @app.route('/health')
+    def health():
+        return jsonify({"status": "ok"})
 
     return app
