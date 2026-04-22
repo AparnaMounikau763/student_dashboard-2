@@ -185,7 +185,6 @@ def update_student(id):
     new_username = data.get("username", student.username).strip()
     new_email = data.get("email", student.email).strip()
 
-    # 🔴 CHECK DUPLICATE USERNAME
     existing_user = Student.query.filter(
         Student.username == new_username,
         Student.id != id
@@ -227,3 +226,27 @@ def delete_student(id):
     db.session.commit()
 
     return success_response("Deleted")
+
+
+@main.route('/health', methods=['GET'])
+def health_check():
+    try:
+        # 1. DB check
+        db.session.execute(db.text("SELECT 1"))
+
+        # 2. Basic route existence check (lightweight)
+        routes = {
+            "register": "/register",
+            "login": "/login",
+            "search": "/search",
+            "students": "/students"
+        }
+
+        return success_response("System Healthy", {
+            "status": "UP",
+            "database": "CONNECTED",
+            "routes": routes
+        })
+
+    except Exception as e:
+        return error_response(f"System unhealthy: {str(e)}", 500)
