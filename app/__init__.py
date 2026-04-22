@@ -6,20 +6,21 @@ db = SQLAlchemy()
 def create_app():
     app = Flask(__name__)
 
-    app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///students.db'
+    # ✅ IMPORTANT: use in-memory DB for testing
+    if app.config.get("TESTING"):
+        app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///:memory:'
+    else:
+        app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///students.db'
+
     app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
 
     db.init_app(app)
 
-    # =========================
-    # REGISTER BLUEPRINT
-    # =========================
+    # ✅ FIX: NO prefix (this fixes ALL 404 errors)
     from .routes import main
-    app.register_blueprint(main, url_prefix="/api")   # 👈 IMPORTANT
+    app.register_blueprint(main)
 
-    # =========================
-    # ROOT HEALTH CHECK (CRITICAL FIX)
-    # =========================
+    # Health check
     @app.route('/health')
     def health():
         return jsonify({"status": "ok"})

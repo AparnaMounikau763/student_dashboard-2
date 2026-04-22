@@ -91,7 +91,7 @@ def search():
 
 
 # =========================
-# STUDENTS (IMPORTANT FIX HERE)
+# STUDENTS
 # =========================
 @main.route('/students', methods=['GET', 'POST'])
 def students():
@@ -108,7 +108,6 @@ def students():
             } for s in students_list
         ]
 
-        # ✅ FIXED: must return "data" not "result"
         return success_response("Students fetched", data)
 
     # CREATE
@@ -167,12 +166,14 @@ def update_student(id):
     new_email = data.get("email")
 
     if new_username:
+        new_username = new_username.strip()
         existing = Student.query.filter_by(username=new_username).first()
         if existing and existing.id != id:
             return error_response("Username already exists")
         student.username = new_username
 
     if new_email:
+        new_email = new_email.strip()
         existing = Student.query.filter_by(email=new_email).first()
         if existing and existing.id != id:
             return error_response("Email already exists")
@@ -201,11 +202,3 @@ def delete_student(id):
     db.session.commit()
 
     return success_response("Deleted successfully")
-
-
-# =========================
-# HEALTH CHECK
-# =========================
-@main.route('/health', methods=['GET'])
-def health():
-    return jsonify({"status": "ok"})
