@@ -1,28 +1,23 @@
-from flask import Flask, jsonify
+from flask import Flask
 from flask_sqlalchemy import SQLAlchemy
 
 db = SQLAlchemy()
 
-def create_app():
+def create_app(testing=False):
+
     app = Flask(__name__)
 
-    # ✅ IMPORTANT: use in-memory DB for testing
-    if app.config.get("TESTING"):
-        app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///:memory:'
+    if testing:
+        app.config["SQLALCHEMY_DATABASE_URI"] = "sqlite:///:memory:"
     else:
-        app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///students.db'
+        app.config["SQLALCHEMY_DATABASE_URI"] = "sqlite:///test.db"
 
-    app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
+    app.config["SQLALCHEMY_TRACK_MODIFICATIONS"] = False
+    app.config["TESTING"] = testing
 
     db.init_app(app)
 
-    # ✅ FIX: NO prefix (this fixes ALL 404 errors)
-    from .routes import main
+    from app.routes import main
     app.register_blueprint(main)
-
-    # Health check
-    @app.route('/health')
-    def health():
-        return jsonify({"status": "ok"})
 
     return app

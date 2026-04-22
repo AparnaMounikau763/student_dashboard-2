@@ -137,7 +137,9 @@ jobs:
         run: pytest -v tests/test_performance.py --cov=app --cov-append
 
       - name: Enforce Coverage >= 90%
-        run: coverage report --fail-under=90
+        run: 
+          pytest --cov=app --cov-report=term-missing --cov-report=xml
+          coverage report -m --fail-under=90
 
       - name: Generate HTML Coverage
         run: coverage html
