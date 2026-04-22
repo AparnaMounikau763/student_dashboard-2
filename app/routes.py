@@ -182,19 +182,29 @@ def update_student(id):
 
     data = request.get_json(silent=True) or {}
 
-    # test edge case: empty update allowed
-    if not data:
-        return success_response("Nothing updated", {
-            "id": student.id,
-            "username": student.username,
-            "email": student.email
-        })
+    new_username = data.get("username", student.username).strip()
+    new_email = data.get("email", student.email).strip()
 
-    if "username" in data:
-        student.username = data["username"].strip()
+    # 🔴 CHECK DUPLICATE USERNAME
+    existing_user = Student.query.filter(
+        Student.username == new_username,
+        Student.id != id
+    ).first()
 
-    if "email" in data:
-        student.email = data["email"].strip()
+    if existing_user:
+        return error_response("Username already exists", 400)
+
+    # 🔴 CHECK DUPLICATE EMAIL
+    existing_email = Student.query.filter(
+        Student.email == new_email,
+        Student.id != id
+    ).first()
+
+    if existing_email:
+        return error_response("Email already exists", 400)
+
+    student.username = new_username
+    student.email = new_email
 
     db.session.commit()
 
@@ -203,8 +213,6 @@ def update_student(id):
         "username": student.username,
         "email": student.email
     })
-
-
 # =========================
 # DELETE
 # =========================
