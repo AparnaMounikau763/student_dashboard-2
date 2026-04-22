@@ -4,7 +4,7 @@ on:
   push:
     branches: ["main"]
 
-# 🔥 REQUIRED FOR TAG PUSH / GIT WRITE ACCESS
+#  REQUIRED FOR TAG PUSH / GIT WRITE ACCESS
 permissions:
   contents: write
 
@@ -193,7 +193,7 @@ jobs:
       # =========================
       - name: Package Artifact
         run: |
-          zip -r app-${NEW_VERSION}.zip app requirements.txt
+          zip -r app-${NEW_VERSION}.zip app run.py requirements.txt
 
       # =========================
       # UPLOAD TO JFROG
