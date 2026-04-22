@@ -138,7 +138,7 @@ def students():
 # =========================
 @main.route('/students/<int:id>', methods=['GET'])
 def get_student(id):
-    student = Student.query.get(id)
+    student = db.session.get(Student, id)   # ✅ FIXED (modern SQLAlchemy)
 
     if not student:
         return error_response("Student not found", 404)
@@ -155,7 +155,7 @@ def get_student(id):
 # =========================
 @main.route('/students/<int:id>', methods=['PUT'])
 def update_student(id):
-    student = Student.query.get(id)
+    student = db.session.get(Student, id)   # ✅ FIXED
 
     if not student:
         return error_response("Student not found", 404)
@@ -193,7 +193,7 @@ def update_student(id):
 # =========================
 @main.route('/students/<int:id>', methods=['DELETE'])
 def delete_student(id):
-    student = Student.query.get(id)
+    student = db.session.get(Student, id)   # ✅ FIXED
 
     if not student:
         return error_response("Student not found", 404)
@@ -202,3 +202,11 @@ def delete_student(id):
     db.session.commit()
 
     return success_response("Deleted successfully")
+
+
+# =========================
+# HEALTH CHECK
+# =========================
+@main.route('/health', methods=['GET'])
+def health():
+    return jsonify({"status": "ok"})
