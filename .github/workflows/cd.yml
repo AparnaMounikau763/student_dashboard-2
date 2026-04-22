@@ -85,6 +85,8 @@ jobs:
             pip install --upgrade pip
             pip install -r requirements.txt
             pip install gunicorn
+            echo "Initializing database..."
+            python3 app/init_db.py
             # =========================
             # STOP OLD APP
             # =========================
